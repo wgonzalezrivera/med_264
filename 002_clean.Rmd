@@ -1,0 +1,116 @@
+---
+title: "002_clean"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("C:/Users/k1covarrubias/Desktop/MED264_final project/Clean Data")
+rm(list = ls())
+library(cmprsk)
+df<- read.csv("df_masymas.csv")
+```
+Determine risk outcome 0 = censorship 1 = death 2 = transplant 
+```{r} 
+df$RISK<- ifelse(df$CAN_REM_CD==5 | df$CAN_REM_CD==6 | df$CAN_REM_CD==7 | df$CAN_REM_CD==9 | df$CAN_REM_CD == 10 | df$CAN_REM_CD == 11 | df$CAN_REM_CD == 12 | df$CAN_REM_CD == 14 | df$CAN_REM_CD == 15 | df$CAN_REM_CD == 16 | df$CAN_REM_CD == 17 | df$CAN_REM_CD == 20 | df$CAN_REM_CD == 21 | df$CAN_REM_CD == 22 | df$CAN_REM_CD == 23 | df$CAN_REM_CD == 24 | is.na(df$CAN_REM_CD), 0,
+                 ifelse (df$CAN_REM_CD==13 | df$CAN_REM_CD==8, 1, 
+                          ifelse(df$CAN_REM_CD == 4 | df$CAN_REM_CD == 18 | df$CAN_REM_CD == 19, 2, 100)))
+unique(df$RISK)
+
+```
+
+```{r}
+
+df$CANHX_BEGIN_DT.x <- anydate(df$CANHX_BEGIN_DT.x)
+df$CANHX_END_DT.x <- anydate(df$CANHX_END_DT.x)
+```
+```{r}
+df$CAN_REM_DT.x <- anydate(df$CAN_REM_DT.x)
+```
+```{r}
+df<- read.csv("df.csv")
+
+```
+
+```{r}
+#define new variable
+# pre covid - defined as removal date before 03012020 or candidate listing date before 03012020 and censorship date after 03012020, would have to create two observations for one person, with the first observations being censored on 03012020, the second having a listing date of 03012020 with the original censorship date
+df_precovid <- filter(df, as.Date(df$CAN_REM_DT.x) <= '2020-03-01'| as.Date(df$CANHX_BEGIN_DT.x) <= '2020-03-01')
+```
+For each unique PX_ID, define start_time as earliest CAN_HX_BEGIN_DT.x.
+For each unique PX_ID, define end_time as latest CAN_HX_END_DT.x
+If latest time > 2020-03-01, replace end time as 2020-03-01
+drop all duplicate PX_ID (distinct)
+Earliest hx begin date pre-covid
+```{r}
+library(data.table)
+df_early_pre <- setDT(df_precovid)[order(as.Date(CANHX_BEGIN_DT.x)), head(.SD, 1L), by = PX_ID]
+```
+SLOWEST FOR LOOP EVER 
+```{r}
+df_early_pre$start_date <- c()
+for(i in 1:nrow(df_early_pre)) {
+  if(as.Date(df_early_pre$CANHX_BEGIN_DT.x[i]) < '2018-01-01'){
+    df_early_pre$CANHX_BEGIN_DT.x[i] <- '2018-01-01' 
+  }
+}
+
+```
+SLOW ASS FOR LOOP
+```{r}
+df_early_pre$start_date <- c()
+for(i in 1:nrow(df_early_pre)) {
+  if(as.Date(df_early_pre$CANHX_END_DT.x[i]) > '2020-03-01'){
+    df_early_pre$CANHX_END_DT.x[i] <- '2020-03-01' 
+  }
+}
+
+```
+
+```{r}
+df_early_pre_test <- filter(df_early_pre, as.Date(df_early_pre$CANHX_END_DT.x) >= '2018-01-02')
+
+```
+
+If your end date is 03-01-2020 and you have any outcome other than censorship, change to censorship
+```{r}
+for(i in 1:nrow(df_early_pre_test)) {
+  if(as.Date(df_early_pre_test$CANHX_END_DT.x[i]) == '2020-03-01' & df_early_pre_test$RISK[i]!=0 ){
+    df_early_pre_test$RISK[i] <- 0 
+  }
+}
+
+
+```
+
+```{r}
+df_latest_pre <- df_precovid %>% group_by(PX_ID) %>% arrange(desc(ymd(df_precovid$CANHX_END_DT.x))) %>% slice(1L)
+
+```
+We have all the observations with the earliest start date and the latest start date in two separate data frames. We need to extract the earliest start date - define a new variable as start. Extract the latest end date a
+```{r}
+
+```
+
+```{r}
+df_covid <- filter(df, as.Date(df$CANHX_END_DT.x) >= '2020-03-01' | as.Date(df$CANHX_BEGIN_DT.x)>= '2020-03-01',)
+
+```
+
+## R Markdown
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <https://urldefense.com/v3/__http://rmarkdown.rstudio.com__;!!Mih3wA!GIGMuDA8e6EW1e5lFkmLAn98cbM4gBZ3QjlqXc0Gndz6JBwKu_5OS4n8GjtWbSBQaprRYe_C4S9HYdYtYwg0Qws60VpwFSkAP2TM6w$ >.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+df_deidentified <- select(df, PX_ID, CAN_ABO, CAN_BMI, CAN_DIAL, CAN_DIAL_DT, CAN_EDUCATION, CAN_ETHNICITY_SRTR, CAN_GENDER, CAN_FUNCTN_STAT, CAN_GFR_DT, CAN_INIT_ACT_STAT_DT.x, CAN_INIT_INACT_STAT_DT.x, CAN_INIT_STAT.x, CAN_LISTING_CTR_ID, CAN_LISTING_CTR_ID, CAN_LISTING_DT.x, CAN_MED_COND, CAN_RACE_SRTR, CAN_RACE, CAN_REM_CD.x, CAN_REM_COD, PX_ID, WL_ORG.x ,CAN_REM_DT.x, CANHX_ALLOC_PRA, CANHX_BEGIN_DT.x, CANHX_END_DT.x, CAN_REM_DT.x )
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

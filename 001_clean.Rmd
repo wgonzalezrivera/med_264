@@ -1,0 +1,84 @@
+---
+title: "MED264_kidney"
+output: html_document
+---
+```{r}
+rm(list = ls())
+df<- read.csv("kidney_waitlist.csv")
+```
+```{r}
+pra_hist <- read_sas("pra_hist.sas7bdat", NULL)
+```
+```{r}
+stathist_kipa <- read_sas("stathist_kipa.sas7bdat", NULL)
+
+```
+```{r}
+df_merge <- merge(df, pra_hist, by="PX_ID")
+df_merge <- merge(df_merge, stathist_kipa, by="PX_ID")
+
+#Why would we have more observations than all three data sets added together 
+
+```
+```{r}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(pacman)
+library(naniar)
+library(haven)
+library(anytime)
+
+pacman::p_load(pacman, dplyr, GGally, ggplot2, ggthemes, ggvis, httr,
+               lubridate, plotly, rio, rmarkdown, shiny, stringr,
+               psych, tidyr)
+```
+
+```{r}
+#selecting for kidney only
+df_filtered <-filter(df_merge, df_merge$WL_ORG.x=="KI")
+#selecting for transplant after 2018
+df_filtered <-filter(df_filtered, df_filtered$REC_TX_DT >= '20180101' | is.na(df_filtered$REC_TX_DT))
+#selecting for age at transplant >18
+df_filtered <-filter(df_filtered, df_filtered$CAN_AGE_AT_LISTING >= 18)
+#selecting for removal from waitlist after 2019
+df_filtered <-filter(df_filtered, df_filtered$CAN_REM_DT.x >= '20180101' | is.na(df_filtered$CAN_REM_DT.x))
+```
+
+```{r}
+#selecting for death after 2018
+df_mas <- filter(df_filtered, CAN_DEATH_DT >= '20180101' | is.na(df_filtered$CAN_DEATH_DT))
+#selecting for removal after 2018
+df_mas <- filter(df_mas, CAN_REM_DT.x >= '20180101' | is.na(df_mas$CAN_REM_DT.x))
+```
+
+```{r}
+df_selected <- select(df_mas, PX_ID, CAN_ABO, CAN_BMI, CAN_DEATH_DT, CAN_DIAL, CAN_DIAL_DT, CAN_EDUCATION, CAN_ETHNICITY_SRTR, CAN_GENDER, CAN_FUNCTN_STAT, CAN_GFR_DT, CAN_INIT_ACT_STAT_CD.x, CAN_INIT_ACT_STAT_DT.x, CAN_INIT_INACT_STAT_DT.x, CAN_INIT_STAT.x, CAN_LISTING_CTR_ID, CAN_LISTING_CTR_ID, CAN_LISTING_DT.x, CAN_MED_COND, CAN_RACE_SRTR, CAN_RACE, CAN_REM_CD.x, CAN_REM_COD, PX_ID, WL_ORG.x ,CAN_REM_DT.x, CANHX_ALLOC_PRA, CANHX_BEGIN_DT.x, CANHX_END_DT.x, CAN_REM_DT.x)
+```
+
+```{r}
+#For the begin date - take either the later of the following 
+#20180101
+#or the earliest listing date
+#For the end date - take the earliest of the following - 
+#20200301
+#censorship date (transplant, death, or removal)
+df_masymas <- filter(df_selected, df_selected$CANHX_END_DT.x >= '2018-01-01')
+df_masymas <- distinct(df_masymas)
+
+
+
+
+```
+```{r}
+write.csv(df_masymas,"df_masymas.csv", row.names = TRUE)
+
+#library(haven)
+#vis_miss(df_selected, warn_large_data = FALSE)
+```
+```{r}
+
+```
+
+
+
